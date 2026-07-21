@@ -41,4 +41,5 @@ Thumbs.db
 # pnpm local store
 .pnpm-store/
 
-work/api-live-runtime/
+# Local work files
+work/
