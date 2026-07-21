@@ -41,5 +41,5 @@ Thumbs.db
 # pnpm local store
 .pnpm-store/
 
-# Local work files
+# Local runtime / temporary execution files
 work/
