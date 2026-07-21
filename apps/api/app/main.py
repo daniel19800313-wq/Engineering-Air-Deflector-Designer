@@ -5,13 +5,17 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.api.simulation import router as simulation_router
 
 
-app = FastAPI(title="Air Deflector Designer API", version="0.1.0")
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"],
+    allow_origins=[
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+        "https://engineering-air-deflector-designer.vercel.app",
+    ],
     allow_methods=["GET", "POST"],
     allow_headers=["Content-Type"],
 )
+
 app.include_router(simulation_router, prefix="/api/v1")
 
 
