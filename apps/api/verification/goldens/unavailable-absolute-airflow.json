@@ -1,0 +1,19 @@
+{
+  "result": {
+    "available_quantities": [],
+    "claim_level": "none",
+    "confidence_level": "conceptual",
+    "diagnostics": [],
+    "provenance": {
+      "input_run_id": "unavailable-absolute-airflow",
+      "solver_name": "conservation-skeleton",
+      "solver_version": "v0.1"
+    },
+    "recommendation_eligible": false,
+    "status": "failed",
+    "unavailable_quantities": [
+      "absolute_total_flow"
+    ]
+  },
+  "schema_version": "add-golden-result-v1"
+}

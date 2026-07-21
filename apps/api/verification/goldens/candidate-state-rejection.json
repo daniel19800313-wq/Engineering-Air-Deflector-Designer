@@ -1,0 +1,17 @@
+{
+  "result": {
+    "available_quantities": [],
+    "claim_level": "none",
+    "confidence_level": "conceptual",
+    "diagnostics": [
+      "CANDIDATE_STATE_REJECTED"
+    ],
+    "provenance": {},
+    "recommendation_eligible": false,
+    "status": "failed",
+    "unavailable_quantities": [
+      "candidate_state"
+    ]
+  },
+  "schema_version": "add-golden-result-v1"
+}

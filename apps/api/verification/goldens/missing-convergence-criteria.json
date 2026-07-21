@@ -1,0 +1,17 @@
+{
+  "result": {
+    "available_quantities": [],
+    "claim_level": "none",
+    "confidence_level": "conceptual",
+    "diagnostics": [
+      "MISSING_CONVERGENCE_CRITERIA"
+    ],
+    "provenance": {},
+    "recommendation_eligible": false,
+    "status": "failed",
+    "unavailable_quantities": [
+      "mass_residual"
+    ]
+  },
+  "schema_version": "add-golden-result-v1"
+}

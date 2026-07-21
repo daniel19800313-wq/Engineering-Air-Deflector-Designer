@@ -1,0 +1,25 @@
+{
+  "result": {
+    "available": true,
+    "case_id": "clear-no-intersection",
+    "diagnostics": [],
+    "engineering_magnitudes": {},
+    "interaction": "no_intersection",
+    "intersection_point": null,
+    "provenance": {
+      "deflector_id": "D1",
+      "evaluator_version": "geometry-interaction-v0.1",
+      "operation_id": "finite_path_planar_rectangle_intersection",
+      "path_id": "P1",
+      "rule_id": "no_intersection",
+      "selected_relationship": "CV_CONTINUE",
+      "surface_id": "D1:face"
+    },
+    "recommendation": null,
+    "routing": "continue_declared_path",
+    "selected_downstream_cv_id": "CV_CONTINUE",
+    "surface_id": null,
+    "surface_relationship": "none"
+  },
+  "schema_version": "add-golden-result-v1"
+}

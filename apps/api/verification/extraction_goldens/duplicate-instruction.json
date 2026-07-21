@@ -1,0 +1,52 @@
+{
+  "result": {
+    "accepted": [],
+    "case_id": "duplicate-instruction",
+    "completed": false,
+    "diagnostics": [
+      "SE_DUPLICATE_INSTRUCTION"
+    ],
+    "excluded_quantities": {
+      "aerodynamics": null,
+      "pressure": null,
+      "resistance": null,
+      "velocity": null
+    },
+    "global_conserved": null,
+    "global_residual": {
+      "availability": "unavailable",
+      "provenance": null,
+      "unavailable_reason": "sequence did not complete",
+      "unit": "test_quantity_unit",
+      "value": null
+    },
+    "inlet": {
+      "availability": "available",
+      "provenance": {
+        "model_relationship": null,
+        "solver_component": null,
+        "source_reference": "sprint-1.8-fixture",
+        "source_type": "prescribed_test_input"
+      },
+      "unavailable_reason": null,
+      "unit": "test_quantity_unit",
+      "value": 10
+    },
+    "recommendation": null,
+    "terminal_downstream": {
+      "availability": "unavailable",
+      "provenance": null,
+      "unavailable_reason": "sequence did not complete",
+      "unit": "test_quantity_unit",
+      "value": null
+    },
+    "total_extracted": {
+      "availability": "unavailable",
+      "provenance": null,
+      "unavailable_reason": "sequence did not complete",
+      "unit": "test_quantity_unit",
+      "value": null
+    }
+  },
+  "schema_version": "add-golden-result-v1"
+}

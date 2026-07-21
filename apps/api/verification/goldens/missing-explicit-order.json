@@ -1,0 +1,15 @@
+{
+  "result": {
+    "available_quantities": [],
+    "claim_level": "none",
+    "confidence_level": "conceptual",
+    "diagnostics": [
+      "MISSING_EXPLICIT_OUTLET_ORDER"
+    ],
+    "provenance": {},
+    "recommendation_eligible": false,
+    "status": "specification_failure",
+    "unavailable_quantities": []
+  },
+  "schema_version": "add-golden-result-v1"
+}

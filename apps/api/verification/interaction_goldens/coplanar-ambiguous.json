@@ -1,0 +1,27 @@
+{
+  "result": {
+    "available": false,
+    "case_id": "coplanar-ambiguous",
+    "diagnostics": [
+      "GI_COPLANAR_AMBIGUOUS"
+    ],
+    "engineering_magnitudes": {},
+    "interaction": "coplanar_or_ambiguous",
+    "intersection_point": null,
+    "provenance": {
+      "deflector_id": "D1",
+      "evaluator_version": "geometry-interaction-v0.1",
+      "operation_id": "finite_path_planar_rectangle_intersection",
+      "path_id": "P5",
+      "rule_id": "coplanar_or_ambiguous",
+      "selected_relationship": null,
+      "surface_id": "D1:face"
+    },
+    "recommendation": null,
+    "routing": "unavailable",
+    "selected_downstream_cv_id": null,
+    "surface_id": null,
+    "surface_relationship": "ambiguous"
+  },
+  "schema_version": "add-golden-result-v1"
+}

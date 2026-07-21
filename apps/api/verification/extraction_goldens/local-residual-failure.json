@@ -1,0 +1,31 @@
+{
+  "result": {
+    "case_id": "local-residual-failure",
+    "completed": false,
+    "conserved": false,
+    "diagnostics": [
+      "SE_LOCAL_CONSERVATION_FAILED"
+    ],
+    "excluded_quantities": {
+      "aerodynamics": null,
+      "pressure": null,
+      "resistance": null,
+      "velocity": null
+    },
+    "recommendation": null,
+    "residual": {
+      "availability": "available",
+      "provenance": {
+        "model_relationship": "authorized_conservation_accounting",
+        "solver_component": "conservation_evaluator",
+        "source_reference": "sequential-extraction-v0.1",
+        "source_type": "solver_calculated"
+      },
+      "unavailable_reason": null,
+      "unit": "test_quantity_unit",
+      "value": 1
+    },
+    "residual_scope": "local"
+  },
+  "schema_version": "add-golden-result-v1"
+}

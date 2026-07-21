@@ -1,0 +1,17 @@
+{
+  "result": {
+    "available_quantities": [],
+    "claim_level": "none",
+    "confidence_level": "conceptual",
+    "diagnostics": [],
+    "provenance": {
+      "value_identity_preserved": true
+    },
+    "recommendation_eligible": false,
+    "status": "converged",
+    "unavailable_quantities": [
+      "absolute_total_flow"
+    ]
+  },
+  "schema_version": "add-golden-result-v1"
+}

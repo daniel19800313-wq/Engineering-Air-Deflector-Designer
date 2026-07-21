@@ -1,0 +1,29 @@
+{
+  "result": {
+    "available": true,
+    "case_id": "edge-intersection",
+    "diagnostics": [],
+    "engineering_magnitudes": {},
+    "interaction": "edge_intersection",
+    "intersection_point": {
+      "x": 1.0,
+      "y": 0.0,
+      "z": 0.0
+    },
+    "provenance": {
+      "deflector_id": "D1",
+      "evaluator_version": "geometry-interaction-v0.1",
+      "operation_id": "finite_path_planar_rectangle_intersection",
+      "path_id": "P3",
+      "rule_id": "edge_intersection",
+      "selected_relationship": "CV_REDIRECT",
+      "surface_id": "D1:face"
+    },
+    "recommendation": null,
+    "routing": "redirect_to_declared_downstream_cv",
+    "selected_downstream_cv_id": "CV_REDIRECT",
+    "surface_id": "D1:face",
+    "surface_relationship": "edge"
+  },
+  "schema_version": "add-golden-result-v1"
+}

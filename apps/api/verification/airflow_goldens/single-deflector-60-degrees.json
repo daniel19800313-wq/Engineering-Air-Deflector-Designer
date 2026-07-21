@@ -1,0 +1,94 @@
+{
+  "result": {
+    "assumptions": [
+      "directional_area_distance_proxy",
+      "projected_area_interception_proxy",
+      "geometric_reflection_redirection_proxy",
+      "ordered_deflector_mixing",
+      "shares_scaled_to_supplied_total_cfm"
+    ],
+    "case_id": "single-deflector-60-degrees",
+    "claim_label": "experimental_scaled_distribution",
+    "completed": true,
+    "conservation_residual_cfm": -1.1368683772161603e-13,
+    "conserved": true,
+    "deflectors": [
+      {
+        "id": "D1",
+        "intercepted_fraction_proxy": 0.12500000000000003,
+        "normal": {
+          "x": 0.8660254037844386,
+          "y": 0.0,
+          "z": 0.5000000000000001
+        },
+        "projected_area_m2": 0.020000000000000007,
+        "redirected_weights_usable": true
+      }
+    ],
+    "diagnostics": [],
+    "estimated_total_cfm": 800.0000000000001,
+    "outlets": [
+      {
+        "downstream_order": 0,
+        "estimated_airflow_cfm": 63.58125558422296,
+        "outlet_id": "R0C0",
+        "percentage": 7.94765694802787,
+        "provenance": "documented_v0.1_proxy"
+      },
+      {
+        "downstream_order": 1,
+        "estimated_airflow_cfm": 113.68436869700383,
+        "outlet_id": "R0C1",
+        "percentage": 14.210546087125472,
+        "provenance": "documented_v0.1_proxy"
+      },
+      {
+        "downstream_order": 2,
+        "estimated_airflow_cfm": 142.9748198481501,
+        "outlet_id": "R0C2",
+        "percentage": 17.871852481018774,
+        "provenance": "documented_v0.1_proxy"
+      },
+      {
+        "downstream_order": 3,
+        "estimated_airflow_cfm": 79.7595558706231,
+        "outlet_id": "R0C3",
+        "percentage": 9.969944483827883,
+        "provenance": "documented_v0.1_proxy"
+      },
+      {
+        "downstream_order": 4,
+        "estimated_airflow_cfm": 63.58125558422296,
+        "outlet_id": "R1C0",
+        "percentage": 7.94765694802787,
+        "provenance": "documented_v0.1_proxy"
+      },
+      {
+        "downstream_order": 5,
+        "estimated_airflow_cfm": 113.6843686970038,
+        "outlet_id": "R1C1",
+        "percentage": 14.210546087125472,
+        "provenance": "documented_v0.1_proxy"
+      },
+      {
+        "downstream_order": 6,
+        "estimated_airflow_cfm": 142.97481984815016,
+        "outlet_id": "R1C2",
+        "percentage": 17.871852481018774,
+        "provenance": "documented_v0.1_proxy"
+      },
+      {
+        "downstream_order": 7,
+        "estimated_airflow_cfm": 79.75955587062307,
+        "outlet_id": "R1C3",
+        "percentage": 9.969944483827883,
+        "provenance": "documented_v0.1_proxy"
+      }
+    ],
+    "recommendation": null,
+    "supplied_total_cfm": 800,
+    "terminal_remaining_cfm": 0.0,
+    "validation": "experimental_not_validated_hvac_physics"
+  },
+  "schema_version": "add-golden-result-v1"
+}

@@ -1,0 +1,26 @@
+{
+  "result": {
+    "case_id": "unavailable-conservation-residual",
+    "completed": false,
+    "conserved": null,
+    "diagnostics": [
+      "SE_RESIDUAL_UNAVAILABLE"
+    ],
+    "excluded_quantities": {
+      "aerodynamics": null,
+      "pressure": null,
+      "resistance": null,
+      "velocity": null
+    },
+    "recommendation": null,
+    "residual": {
+      "availability": "unavailable",
+      "provenance": null,
+      "unavailable_reason": "conservation operand unavailable",
+      "unit": "test_quantity_unit",
+      "value": null
+    },
+    "residual_scope": "local"
+  },
+  "schema_version": "add-golden-result-v1"
+}

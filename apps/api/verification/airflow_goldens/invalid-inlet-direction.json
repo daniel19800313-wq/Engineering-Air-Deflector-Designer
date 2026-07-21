@@ -1,0 +1,27 @@
+{
+  "result": {
+    "assumptions": [
+      "directional_area_distance_proxy",
+      "projected_area_interception_proxy",
+      "geometric_reflection_redirection_proxy",
+      "ordered_deflector_mixing",
+      "shares_scaled_to_supplied_total_cfm"
+    ],
+    "case_id": "invalid-inlet-direction",
+    "claim_label": "experimental_unavailable",
+    "completed": false,
+    "conservation_residual_cfm": null,
+    "conserved": null,
+    "deflectors": [],
+    "diagnostics": [
+      "inlet direction must be an explicit unit vector"
+    ],
+    "estimated_total_cfm": null,
+    "outlets": [],
+    "recommendation": null,
+    "supplied_total_cfm": 800,
+    "terminal_remaining_cfm": null,
+    "validation": "experimental_not_validated_hvac_physics"
+  },
+  "schema_version": "add-golden-result-v1"
+}

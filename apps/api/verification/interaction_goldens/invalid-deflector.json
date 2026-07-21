@@ -1,0 +1,27 @@
+{
+  "result": {
+    "available": false,
+    "case_id": "invalid-deflector",
+    "diagnostics": [
+      "GI_INVALID_DEFLECTOR"
+    ],
+    "engineering_magnitudes": {},
+    "interaction": "invalid_input",
+    "intersection_point": null,
+    "provenance": {
+      "deflector_id": "D1",
+      "evaluator_version": "geometry-interaction-v0.1",
+      "operation_id": "finite_path_planar_rectangle_intersection",
+      "path_id": "P7",
+      "rule_id": "invalid_input",
+      "selected_relationship": null,
+      "surface_id": "D1:face"
+    },
+    "recommendation": null,
+    "routing": "rejected",
+    "selected_downstream_cv_id": null,
+    "surface_id": null,
+    "surface_relationship": "none"
+  },
+  "schema_version": "add-golden-result-v1"
+}

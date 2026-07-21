@@ -1,0 +1,120 @@
+{
+  "result": {
+    "accepted": [
+      {
+        "conserved": true,
+        "downstream": {
+          "availability": "available",
+          "provenance": {
+            "model_relationship": "remaining_after:O1",
+            "solver_component": "sequential_extraction",
+            "source_reference": "sequential-extraction-v0.1",
+            "source_type": "solver_calculated"
+          },
+          "unavailable_reason": null,
+          "unit": "test_quantity_unit",
+          "value": 10
+        },
+        "extracted": {
+          "availability": "available",
+          "provenance": {
+            "model_relationship": null,
+            "solver_component": null,
+            "source_reference": "sprint-1.8-fixture",
+            "source_type": "prescribed_test_input"
+          },
+          "unavailable_reason": null,
+          "unit": "test_quantity_unit",
+          "value": 0
+        },
+        "extraction_source": "prescribed_test_input",
+        "incoming": {
+          "availability": "available",
+          "provenance": {
+            "model_relationship": null,
+            "solver_component": null,
+            "source_reference": "sprint-1.8-fixture",
+            "source_type": "prescribed_test_input"
+          },
+          "unavailable_reason": null,
+          "unit": "test_quantity_unit",
+          "value": 10
+        },
+        "outlet_id": "O1",
+        "residual": {
+          "availability": "available",
+          "provenance": {
+            "model_relationship": "authorized_conservation_accounting",
+            "solver_component": "conservation_evaluator",
+            "source_reference": "sequential-extraction-v0.1",
+            "source_type": "solver_calculated"
+          },
+          "unavailable_reason": null,
+          "unit": "test_quantity_unit",
+          "value": 0
+        },
+        "source_reference": "fixture:O1"
+      }
+    ],
+    "case_id": "available-zero-extraction",
+    "completed": true,
+    "diagnostics": [],
+    "excluded_quantities": {
+      "aerodynamics": null,
+      "pressure": null,
+      "resistance": null,
+      "velocity": null
+    },
+    "global_conserved": true,
+    "global_residual": {
+      "availability": "available",
+      "provenance": {
+        "model_relationship": "authorized_conservation_accounting",
+        "solver_component": "conservation_evaluator",
+        "source_reference": "sequential-extraction-v0.1",
+        "source_type": "solver_calculated"
+      },
+      "unavailable_reason": null,
+      "unit": "test_quantity_unit",
+      "value": 0.0
+    },
+    "inlet": {
+      "availability": "available",
+      "provenance": {
+        "model_relationship": null,
+        "solver_component": null,
+        "source_reference": "sprint-1.8-fixture",
+        "source_type": "prescribed_test_input"
+      },
+      "unavailable_reason": null,
+      "unit": "test_quantity_unit",
+      "value": 10
+    },
+    "recommendation": null,
+    "terminal_downstream": {
+      "availability": "available",
+      "provenance": {
+        "model_relationship": "remaining_after:O1",
+        "solver_component": "sequential_extraction",
+        "source_reference": "sequential-extraction-v0.1",
+        "source_type": "solver_calculated"
+      },
+      "unavailable_reason": null,
+      "unit": "test_quantity_unit",
+      "value": 10
+    },
+    "total_extracted": {
+      "availability": "available",
+      "provenance": {
+        "model_relationship": "total_extracted",
+        "solver_component": "sequential_extraction",
+        "source_reference": "sequential-extraction-v0.1",
+        "source_type": "solver_calculated"
+      },
+      "unavailable_reason": null,
+      "unit": "test_quantity_unit",
+      "value": 0.0
+    }
+  },
+  "schema_version": "add-golden-result-v1"
+}

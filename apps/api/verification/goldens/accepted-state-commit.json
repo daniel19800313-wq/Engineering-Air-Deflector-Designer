@@ -1,0 +1,17 @@
+{
+  "result": {
+    "available_quantities": [],
+    "claim_level": "none",
+    "confidence_level": "conceptual",
+    "diagnostics": [],
+    "provenance": {
+      "accepted_outlet_count": 8
+    },
+    "recommendation_eligible": false,
+    "status": "accepted",
+    "unavailable_quantities": [
+      "outlet_physics"
+    ]
+  },
+  "schema_version": "add-golden-result-v1"
+}

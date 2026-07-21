@@ -1,0 +1,31 @@
+{
+  "result": {
+    "available": false,
+    "case_id": "missing-downstream",
+    "diagnostics": [
+      "GI_DOWNSTREAM_RELATIONSHIP_MISSING"
+    ],
+    "engineering_magnitudes": {},
+    "interaction": "face_intersection",
+    "intersection_point": {
+      "x": 0.0,
+      "y": 0.0,
+      "z": 0.0
+    },
+    "provenance": {
+      "deflector_id": "D1",
+      "evaluator_version": "geometry-interaction-v0.1",
+      "operation_id": "finite_path_planar_rectangle_intersection",
+      "path_id": "P9",
+      "rule_id": "face_intersection",
+      "selected_relationship": null,
+      "surface_id": "D1:face"
+    },
+    "recommendation": null,
+    "routing": "unavailable",
+    "selected_downstream_cv_id": null,
+    "surface_id": "D1:face",
+    "surface_relationship": "front_facing"
+  },
+  "schema_version": "add-golden-result-v1"
+}
