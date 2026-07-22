@@ -56,7 +56,7 @@ const result = {
   ),
 
   fan_operating_results: [],
-} as SimulationResult;
+} as unknown as SimulationResult;
 
 const createFanResult = (
   equipmentId: "SF-501" | "SF-502",
