@@ -75,9 +75,14 @@ class WorkspaceSimulationRequest(StrictModel):
 
     grille_width_mm: float = Field(gt=0)
     grille_height_mm: float = Field(gt=0)
+    plenum_width_mm: float | None = Field(default=None, gt=0)
+    plenum_height_mm: float | None = Field(default=None, gt=0)
     plenum_depth_mm: float = Field(gt=0)
-    inlet_width_mm: float = Field(gt=0)
-    inlet_height_mm: float = Field(gt=0)
+
+    inlet_shape: Literal["rectangular", "circular"] = "rectangular"
+    inlet_width_mm: float | None = Field(default=None, gt=0)
+    inlet_height_mm: float | None = Field(default=None, gt=0)
+    inlet_diameter_mm: float | None = Field(default=None, gt=0)
     inlet: InletBoundaryInput
     fans: tuple[FanOperatingInput, ...]
     rows: int = Field(gt=0)
@@ -158,7 +163,24 @@ def _solver_input(request: WorkspaceSimulationRequest, total_airflow_cfm: float 
         raise HTTPException(422, detail="Experimental Airflow Solver V0.1 requires exactly eight outlets")
     grille_width_m = request.grille_width_mm / 1000.0
     grille_height_m = request.grille_height_mm / 1000.0
+    plenum_width_m = (request.plenum_width_mm if request.plenum_width_mm is not None else request.grille_width_mm) / 1000.0
+    plenum_height_m = (request.plenum_height_mm if request.plenum_height_mm is not None else request.grille_height_mm) / 1000.0
     depth_m = request.plenum_depth_mm / 1000.0
+
+    if grille_width_m > plenum_width_m or grille_height_m > plenum_height_m:
+        raise HTTPException(422, detail="Grille cannot be larger than plenum")
+
+    if request.inlet_shape == "rectangular":
+        inlet_width_m = (request.inlet_width_mm or 0) / 1000.0
+        inlet_height_m = (request.inlet_height_mm or 0) / 1000.0
+    else:
+        import math
+        if request.inlet_diameter_mm is None:
+            raise HTTPException(422, detail="Circular inlet requires inlet_diameter_mm")
+        diameter_m = request.inlet_diameter_mm / 1000.0
+        side = math.sqrt(math.pi * (diameter_m / 2.0) ** 2)
+        inlet_width_m = side
+        inlet_height_m = side
     direction = request.inlet.direction
     direction_magnitude = (direction.x ** 2 + direction.y ** 2 + direction.z ** 2) ** 0.5
     if direction_magnitude == 0.0:
@@ -201,11 +223,11 @@ def _solver_input(request: WorkspaceSimulationRequest, total_airflow_cfm: float 
     if total_airflow_cfm is None:
         _, total_airflow_cfm = _fan_operating_results(request)
     return ExperimentalAirflowInput(
-        AirflowPlenum(grille_width_m, grille_height_m, depth_m),
+        AirflowPlenum(plenum_width_m, plenum_height_m, depth_m),
         AirflowInlet(
             Vector3(request.inlet.position.x, request.inlet.position.y, request.inlet.position.z),
-            request.inlet_width_mm / 1000.0,
-            request.inlet_height_mm / 1000.0,
+            inlet_width_m,
+            inlet_height_m,
             normalized_direction,
             total_airflow_cfm,
         ),
