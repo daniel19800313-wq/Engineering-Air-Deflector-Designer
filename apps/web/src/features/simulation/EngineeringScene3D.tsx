@@ -574,8 +574,7 @@ function VerticalChevronLayer({
   return (
     <group position={[0, y, 0]}>
       {Array.from({ length: count }, (_, index) => {
-        const ratio =
-          count === 1 ? 0.5 : index / (count - 1);
+        const ratio = index / (count - 1);
         const x = -usableWidth / 2 + usableWidth * ratio;
         const rotation = x < 0 ? angle : -angle;
 
@@ -615,8 +614,7 @@ function HorizontalChevronLayer({
   return (
     <group position={[0, y, 0]}>
       {Array.from({ length: count }, (_, index) => {
-        const ratio =
-          count === 1 ? 0.5 : index / (count - 1);
+        const ratio = index / (count - 1);
         const z = -usableHeight / 2 + usableHeight * ratio;
         const rotation = z < 0 ? -angle : angle;
 
