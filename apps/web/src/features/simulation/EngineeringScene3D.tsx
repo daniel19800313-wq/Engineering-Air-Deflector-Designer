@@ -771,10 +771,21 @@ function LinearParticles({
     return vector;
   }, [segment.direction]);
 
+  const particleQuaternion = useMemo(() => {
+    if (directionVector.lengthSq() === 0) {
+      return new THREE.Quaternion();
+    }
+
+    return new THREE.Quaternion().setFromUnitVectors(
+      new THREE.Vector3(0, 0, 1),
+      directionVector,
+    );
+  }, [directionVector]);
+
   useFrame(({ clock }) => {
     const normalizedSpeed =
       Math.max(segment.engineeringSpeed, 0) *
-      0.015;
+      (segment.kind === "duct" ? 0.015 : 0.055);
 
     refs.current.forEach(
       (mesh, index) => {
@@ -802,6 +813,12 @@ function LinearParticles({
         (_, index) => (
           <mesh
             key={index}
+            quaternion={particleQuaternion}
+            scale={
+              segment.kind === "duct"
+                ? [1, 1, 2.2]
+                : [0.78, 0.78, 4.8]
+            }
             ref={mesh => {
               if (mesh) {
                 refs.current[index] = mesh;
@@ -812,9 +829,9 @@ function LinearParticles({
               args={[
                 segment.kind === "duct"
                   ? 0.018
-                  : 0.016,
-                8,
-                8,
+                  : 0.014,
+                10,
+                10,
               ]}
             />
 
