@@ -57,8 +57,7 @@ export function InputPanel({form,result,setForm,running,errors,onRun,onReset}:Pr
           <label>{t("angle")} <span>deg +Y</span><input aria-label={`${t("deflector")} ${index+1} ${t("angle")}`} type="number" value={item.angle_deg_about_y} onChange={e=>updateDeflector(index,{angle_deg_about_y:number(e.target.value)})}/></label>
           {(["x","y","z"] as const).map((axis)=><label key={axis}>{t((`position${axis.toUpperCase()}`) as "positionX"|"positionY"|"positionZ")} <span>m</span><input aria-label={`${t("deflector")} ${index+1} ${axis.toUpperCase()}`} type="number" step="0.1" value={item.position_m[axis]} onChange={e=>updatePosition(index,axis,number(e.target.value))}/></label>)}
         </div></section>)}
-    </div><button className="secondary full" type="button" onClick={()=>setForm(current=>({...current,deflectors:[...current.deflectors,{identifier:`D${current.deflectors.length+1}`,position_m:{x:0,y:0,z:1},angle_deg_about_y:45,width_m:0.2,height_m:0.2}]}))}>{t("addDeflector")}</button></fieldset>
+    </div><button className="secondary full" type="button" onClick={()=>setForm(current=>({...current,deflectors:[...current.deflectors,{identifier:`D${current.deflectors.length+1}`,position_m:{x:0,y:0,z:0.075},angle_deg_about_y:45,width_m:0.2,height_m:0.2}]}))}>{t("addDeflector")}</button></fieldset>
     {errors.length>0&&<div className="error-box" role="alert"><strong>{t("checkInputs")}</strong><ul>{errors.map((item,index)=><li key={`${item.message}-${index}`}>{item.message}{item.technical&&<details><summary>{t("technicalDiagnostics")}</summary><code>{item.technical}</code></details>}</li>)}</ul></div>}
     <div className="actions"><button className="secondary" type="button" onClick={onReset}>{t("reset")}</button><button className="primary" type="button" disabled={running} onClick={onRun}>{running?t("runningSolver"):t("runSimulation")}</button></div>
   </aside>;
-}
