@@ -386,7 +386,7 @@ const inletHeight = (form.inlet_height_mm ?? 1450) / 1000;
    * This is intentionally not named ductLength or exposed as an engineering
    * result because the current input schema has no physical duct length.
    */
-  const ductVisualLength = Math.max(depth * 0.75, 0.5);
+const ductVisualLength = 3.2;
 
   return {
     plenum: {
