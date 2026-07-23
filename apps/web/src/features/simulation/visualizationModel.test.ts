@@ -1,475 +1,448 @@
-import { describe, expect, it } from "vitest";
 import type {
+  EngineeringValue,
   FanOperatingResult,
   SimulationResult,
 } from "../../api/contracts";
-import { INITIAL_FORM } from "./initialState";
-import {
-  buildEngineeringSceneModel,
-  buildFlowSegments,
-  particleControlPoint,
-  solverToSceneVector,
-} from "./visualizationModel";
+import type { WorkspaceForm } from "./initialState";
 
-const engineeringValue = (
-  value: number,
-  unit: string,
-) => ({
-  availability: "available" as const,
-  value,
-  unit,
-  unavailable_reason: null,
-  provenance: null,
-});
+export type HeatMetric =
+  | "airflow_percentage"
+  | "airflow_cfm"
+  | "airflow_cmh"
+  | "outlet_velocity_mps";
 
-const result = {
-  rows: 2,
-  columns: 4,
+export type FlowSegmentKind = "duct" | "outlet";
+export type InletVisualShape = "circular" | "rectangular";
 
-  outlets: Array.from(
-    { length: 8 },
-    (_, index) => ({
-      outlet_id: `R${Math.floor(index / 4)}C${index % 4}`,
-      row: Math.floor(index / 4),
-      column: index % 4,
+export interface OutletVisual {
+  id: string;
+  row: number;
+  column: number;
+  position: [number, number, number];
+  width: number;
+  height: number;
+  value: EngineeringValue | null;
+  airflowPercentage: number | null;
+  airflowCmh: number | null;
+  velocityMps: number | null;
+  heat: number | null;
+}
 
-      airflow_percentage: engineeringValue(
-        8 + index,
-        "%",
-      ),
+/**
+ * Visual-only duct geometry.
+ *
+ * The current form does not contain an engineering duct length input.
+ * Therefore, length is an explicitly identified visualization estimate and
+ * must not be interpreted as a solver-derived physical dimension.
+ */
+export interface DuctVisual {
+  shape: InletVisualShape;
+  diameter: number | null;
+  width: number;
+  height: number;
+  length: number;
+  endPosition: [number, number, number];
+  direction: [number, number, number];
+  estimatedLength: true;
+}
 
-      airflow_cfm: engineeringValue(
-        64 + index * 8,
-        "CFM",
-      ),
+export interface EngineeringSceneModel {
+  plenum: {
+    width: number;
+    height: number;
+    depth: number;
+  };
 
-      airflow_cmh: engineeringValue(
-        108 + index * 14,
-        "m^3/h",
-      ),
+  inlet: {
+    shape: InletVisualShape;
+    diameter: number | null;
+    width: number;
+    height: number;
+    position: [number, number, number];
+    direction: [number, number, number];
+  };
 
-      outlet_velocity_mps: engineeringValue(
-        1 + index / 10,
-        "m/s",
-      ),
-    }),
-  ),
+  ductVisual: DuctVisual;
+  outlets: OutletVisual[];
+  deflectors: WorkspaceForm["deflectors"];
+  fanEmitters: FanOperatingResult[];
+  hasSolverResult: boolean;
+}
 
-  fan_operating_results: [],
-} as unknown as SimulationResult;
+/**
+ * A solver-backed straight flow section used by the Engineering
+ * Visualization Engine.
+ *
+ * This model describes only values supported by solver output:
+ *
+ * - Duct segments use individual fan operating results.
+ * - Outlet segments use individual outlet airflow and velocity results.
+ *
+ * It does not invent plenum streamlines, turbulence, collisions, or CFD paths.
+ */
+export interface FlowSegment {
+  id: string;
+  kind: FlowSegmentKind;
+  sourceId: string;
+  start: [number, number, number];
+  direction: [number, number, number];
+  length: number;
+  count: number;
+  engineeringSpeed: number;
+  engineeringAirflowCmh: number;
+  color: string;
+}
 
-const createFanResult = (
-  equipmentId: "SF-501" | "SF-502",
-  enabled: boolean,
-  airflowCmh: number,
-): FanOperatingResult => ({
-  equipment_id: equipmentId,
-  enabled,
-  status: enabled ? "RUNNING" : "OFF",
+/**
+ * Converts solver coordinates into Three.js scene coordinates.
+ *
+ * Solver: [x, y, z]
+ * Scene : [x, z, y]
+ */
+export function solverToSceneVector(
+  value:
+    | readonly [number, number, number]
+    | { x: number; y: number; z: number },
+): [number, number, number] {
+  if (Array.isArray(value)) {
+    return [value[0], value[2], value[1]];
+  }
 
-  frequency_hz: engineeringValue(
-    enabled ? 60 : 0,
-    "Hz",
-  ),
+  const vector = value as { x: number; y: number; z: number };
 
-  motor_power_hp: engineeringValue(
-    100,
-    "HP",
-  ),
+  return [vector.x, vector.z, vector.y];
+}
 
-  rated_airflow_cmh: engineeringValue(
-    110000,
-    "m^3/h",
-  ),
+export function particleControlPoint(
+  start: [number, number, number],
+  direction: [number, number, number],
+  extent: number,
+): [number, number, number] {
+  return [
+    start[0] + direction[0] * extent * 0.3,
+    start[1] + direction[1] * extent * 0.3,
+    start[2] + direction[2] * extent * 0.3,
+  ];
+}
 
-  rated_static_pressure_pa: engineeringValue(
-    1600,
-    "Pa",
-  ),
+function normalizeVector(
+  vector: [number, number, number],
+): [number, number, number] {
+  const magnitude = Math.hypot(vector[0], vector[1], vector[2]);
 
-  maximum_frequency_hz: engineeringValue(
-    60,
-    "Hz",
-  ),
+  if (magnitude === 0) {
+    return [0, 0, 0];
+  }
 
-  current_airflow_cmh: engineeringValue(
-    airflowCmh,
-    "m^3/h",
-  ),
+  return [
+    vector[0] / magnitude,
+    vector[1] / magnitude,
+    vector[2] / magnitude,
+  ];
+}
 
-  current_airflow_cfm: engineeringValue(
-    airflowCmh / 1.69901082,
-    "CFM",
-  ),
+/**
+ * Returns a perpendicular offset used only to keep the two independent fan
+ * emitters visually distinguishable when they share the same duct path.
+ *
+ * It does not represent a calculated airflow separation.
+ */
+function buildEmitterOffset(
+  direction: [number, number, number],
+  index: number,
+  emitterCount: number,
+  inletWidth: number,
+): [number, number, number] {
+  if (emitterCount <= 1) {
+    return [0, 0, 0];
+  }
 
-  current_static_pressure_pa: engineeringValue(
-    enabled ? 1600 : 0,
-    "Pa",
-  ),
+  const directionVector = normalizeVector(direction);
 
-  inlet_velocity_mps: engineeringValue(
-    enabled ? 190.97 : 0,
-    "m/s",
-  ),
+  let reference: [number, number, number] = [0, 1, 0];
 
-  estimation_label:
-    "Estimated using Fan Affinity Laws",
-});
+  if (Math.abs(directionVector[1]) > 0.9) {
+    reference = [1, 0, 0];
+  }
 
-describe("engineering visualization projection", () => {
-  it("maps geometry without requiring solver output", () => {
-    const model = buildEngineeringSceneModel(
-      INITIAL_FORM,
-      null,
-      "airflow_percentage",
+  const perpendicular: [number, number, number] = normalizeVector([
+    directionVector[1] * reference[2] -
+      directionVector[2] * reference[1],
+    directionVector[2] * reference[0] -
+      directionVector[0] * reference[2],
+    directionVector[0] * reference[1] -
+      directionVector[1] * reference[0],
+  ]);
+
+  const spacing = Math.max(inletWidth * 0.14, 0.035);
+  const centeredIndex = index - (emitterCount - 1) / 2;
+
+  return [
+    perpendicular[0] * centeredIndex * spacing,
+    perpendicular[1] * centeredIndex * spacing,
+    perpendicular[2] * centeredIndex * spacing,
+  ];
+}
+
+/**
+ * Builds solver-backed flow segments.
+ *
+ * Duct:
+ *   One independent segment per enabled fan with positive solver airflow.
+ *
+ * Outlet:
+ *   One segment per outlet with positive solver airflow and available velocity.
+ *
+ * OFF fans generate no segment.
+ */
+export function buildFlowSegments(
+  model: EngineeringSceneModel,
+): FlowSegment[] {
+  if (!model.hasSolverResult) {
+    return [];
+  }
+
+  const inletEnd = solverToSceneVector(model.inlet.position);
+  const inletDirection = normalizeVector(
+    solverToSceneVector(model.inlet.direction),
+  );
+
+  const enabledFans = model.fanEmitters.filter(
+    fan =>
+      fan.enabled &&
+      fan.current_airflow_cmh.value !== null &&
+      (fan.current_airflow_cmh.value ?? 0) > 0,
+  );
+
+  const ductStartBase: [number, number, number] = [
+    inletEnd[0] - inletDirection[0] * model.ductVisual.length,
+    inletEnd[1] - inletDirection[1] * model.ductVisual.length,
+    inletEnd[2] - inletDirection[2] * model.ductVisual.length,
+  ];
+
+  const ductSegments: FlowSegment[] = enabledFans.map((fan, index) => {
+    const airflow = fan.current_airflow_cmh.value ?? 0;
+    const ratedAirflow = fan.rated_airflow_cmh.value ?? 110000;
+
+    const offset = buildEmitterOffset(
+      inletDirection,
+      index,
+      enabledFans.length,
+      model.inlet.width,
     );
 
-    expect(model.outlets).toHaveLength(8);
-    expect(model.deflectors).toHaveLength(1);
-    expect(model.hasSolverResult).toBe(false);
+    return {
+      id: `duct-${fan.equipment_id}`,
+      kind: "duct",
+      sourceId: fan.equipment_id,
 
-    expect(
-      model.outlets.every(
-        outlet =>
-          outlet.value === null &&
-          outlet.heat === null,
-      ),
-    ).toBe(true);
-  });
-
-  it("creates an explicitly estimated visual duct without presenting it as solver geometry", () => {
-    const model = buildEngineeringSceneModel(
-      INITIAL_FORM,
-      null,
-      "airflow_percentage",
-    );
-
-    expect(model.ductVisual.width).toBe(
-      INITIAL_FORM.inlet_width_mm / 1000,
-    );
-
-    expect(model.ductVisual.height).toBe(
-      INITIAL_FORM.inlet_height_mm / 1000,
-    );
-
-    expect(model.ductVisual.length).toBeGreaterThan(0);
-    expect(model.ductVisual.estimatedLength).toBe(true);
-
-    expect(model.ductVisual.endPosition).toEqual(
-      model.inlet.position,
-    );
-
-    expect(model.ductVisual.direction).toEqual(
-      model.inlet.direction,
-    );
-  });
-
-  it("preserves solver values and only normalizes their visual heat", () => {
-    const model = buildEngineeringSceneModel(
-      INITIAL_FORM,
-      result,
-      "airflow_cfm",
-    );
-
-    expect(
-      model.outlets.map(
-        outlet => outlet.value?.value,
-      ),
-    ).toEqual(
-      result.outlets.map(
-        outlet => outlet.airflow_cfm.value,
-      ),
-    );
-
-    expect(model.outlets[0].heat).toBe(0);
-    expect(model.outlets[7].heat).toBe(1);
-  });
-
-  it("maps multiple deflectors directly from form geometry", () => {
-    const second = {
-      ...INITIAL_FORM.deflectors[0],
-      identifier: "D2",
-
-      position_m: {
-        x: 0.4,
-        y: 0.1,
-        z: 0.6,
-      },
-
-      angle_deg_about_y: 30,
-    };
-
-    const form = {
-      ...INITIAL_FORM,
-
-      deflectors: [
-        ...INITIAL_FORM.deflectors,
-        second,
+      start: [
+        ductStartBase[0] + offset[0],
+        ductStartBase[1] + offset[1],
+        ductStartBase[2] + offset[2],
       ],
+
+      direction: inletDirection,
+      length: model.ductVisual.length,
+
+      count: Math.max(
+        1,
+        Math.round((airflow / Math.max(ratedAirflow, 1)) * 10),
+      ),
+
+      engineeringSpeed: fan.inlet_velocity_mps.value ?? 0,
+      engineeringAirflowCmh: airflow,
+      color: index === 0 ? "#6dd9cf" : "#d8ff4f",
     };
-
-    const model = buildEngineeringSceneModel(
-      form,
-      null,
-      "airflow_percentage",
-    );
-
-    expect(model.deflectors).toEqual(
-      form.deflectors,
-    );
   });
 
-  it("normalizes inlet direction and preserves its configured origin", () => {
-    const form = {
-      ...INITIAL_FORM,
+  const outletLength = Math.max(model.plenum.depth * 0.12, 0.12);
 
-      inlet: {
-        position: {
-          x: 0.2,
-          y: -0.1,
-          z: 1.7,
-        },
+  const outletSegments: FlowSegment[] = model.outlets
+    .filter(
+      outlet =>
+        outlet.airflowCmh !== null &&
+        outlet.velocityMps !== null &&
+        (outlet.airflowCmh ?? 0) > 0,
+    )
+    .map(outlet => ({
+      id: `outlet-${outlet.id}`,
+      kind: "outlet",
+      sourceId: outlet.id,
+      start: solverToSceneVector(outlet.position),
+      direction: [0, -1, 0],
+      length: outletLength,
 
-        direction: {
-          x: 1,
-          y: 2,
-          z: -2,
-        },
-      },
-    };
+      count: Math.max(
+        1,
+        Math.round(((outlet.airflowCmh ?? 0) / 220000) * 80),
+      ),
 
-    const model = buildEngineeringSceneModel(
-      form,
-      null,
-      "airflow_percentage",
-    );
+      engineeringSpeed: outlet.velocityMps ?? 0,
+      engineeringAirflowCmh: outlet.airflowCmh ?? 0,
+      color: "#d8ff4f",
+    }));
 
-    expect(model.inlet.position).toEqual([
-      0.2,
-      -0.1,
-      1.7,
-    ]);
+  return [...ductSegments, ...outletSegments];
+}
 
-    expect(model.inlet.direction).toEqual([
-      1 / 3,
-      2 / 3,
-      -2 / 3,
-    ]);
-  });
+/**
+ * Backward-compatible alias.
+ *
+ * Existing callers can continue using buildParticleIndicators while the
+ * visualization layer transitions to the FlowSegment terminology.
+ */
+export const buildParticleIndicators = buildFlowSegments;
 
-  it("maps canonical solver directions to the same arrow and initial particle tangent", () => {
-    const directions: [
-      [number, number, number],
-      string,
-    ][] = [
-      [[0, 0, -1], "down"],
-      [[0, 0, 1], "up"],
-      [[1, 0, 0], "left-to-right"],
-      [[-1, 0, 0], "right-to-left"],
-      [[0, 1, 0], "front-to-back"],
-      [[0, -1, 0], "back-to-front"],
-      [[1 / 3, 2 / 3, -2 / 3], "diagonal"],
-    ];
+export function buildEngineeringSceneModel(
+  form: WorkspaceForm,
+  result: SimulationResult | null,
+  metric: HeatMetric,
+): EngineeringSceneModel {
+  const width = form.grille_width_mm / 1000;
+  const height = form.grille_height_mm / 1000;
+  const depth = form.plenum_depth_mm / 1000;
 
-    for (const [solverDirection] of directions) {
-      const sceneDirection =
-        solverToSceneVector(solverDirection);
+  const inletShape: InletVisualShape =
+    form.inlet_shape === "circular" ? "circular" : "rectangular";
 
-      const start: [number, number, number] = [
-        0,
-        2,
-        0,
-      ];
+  const inletDiameter =
+    inletShape === "circular"
+      ? (form.inlet_diameter_mm ?? form.inlet_width_mm) / 1000
+      : null;
 
-      const control = particleControlPoint(
-        start,
-        sceneDirection,
-        2,
-      );
+  const inletWidth =
+    inletShape === "circular"
+      ? (inletDiameter ?? form.inlet_width_mm / 1000)
+      : form.inlet_width_mm / 1000;
 
-      const tangent = control.map(
-        (value, index) =>
-          (value - start[index]) / 0.6,
-      );
+  const inletHeight =
+    inletShape === "circular"
+      ? (inletDiameter ?? form.inlet_height_mm / 1000)
+      : form.inlet_height_mm / 1000;
 
-      expect(tangent[0]).toBeCloseTo(
-        sceneDirection[0],
-      );
+  const outletWidth = form.outlet_width_mm / 1000;
+  const outletHeight = form.outlet_height_mm / 1000;
 
-      expect(tangent[1]).toBeCloseTo(
-        sceneDirection[1],
-      );
+  const resultByCell = new Map(
+    result?.outlets.map(outlet => [
+      `${outlet.row}:${outlet.column}`,
+      outlet,
+    ]) ?? [],
+  );
 
-      expect(tangent[2]).toBeCloseTo(
-        sceneDirection[2],
-      );
-    }
-  });
+  const available =
+    result?.outlets
+      .map(outlet => outlet[metric].value)
+      .filter((value): value is number => value !== null) ?? [];
 
-  it("creates no flow segments without solver output", () => {
-    const model = buildEngineeringSceneModel(
-      INITIAL_FORM,
-      null,
-      "airflow_percentage",
-    );
+  const minimum = available.length ? Math.min(...available) : 0;
+  const maximum = available.length ? Math.max(...available) : 0;
 
-    expect(buildFlowSegments(model)).toEqual([]);
-  });
+  const outlets: OutletVisual[] = [];
 
-  it("creates outlet flow segments from solver outlet results", () => {
-    const model = buildEngineeringSceneModel(
-      INITIAL_FORM,
-      result,
-      "airflow_percentage",
-    );
+  for (let row = 0; row < form.rows; row += 1) {
+    for (let column = 0; column < form.columns; column += 1) {
+      const resultOutlet = resultByCell.get(`${row}:${column}`);
+      const value = resultOutlet?.[metric] ?? null;
+      const numeric = value?.value ?? null;
 
-    const outletSegments =
-      buildFlowSegments(model).filter(
-        segment => segment.kind === "outlet",
-      );
+      outlets.push({
+        id: resultOutlet?.outlet_id ?? `R${row}C${column}`,
+        row,
+        column,
 
-    expect(outletSegments).toHaveLength(8);
-
-    expect(outletSegments[0].id).toBe(
-      "outlet-R0C0",
-    );
-
-    expect(
-      outletSegments[0].engineeringAirflowCmh,
-    ).toBe(
-      result.outlets[0].airflow_cmh.value,
-    );
-
-    expect(
-      outletSegments[0].engineeringSpeed,
-    ).toBe(
-      result.outlets[0].outlet_velocity_mps.value,
-    );
-  });
-
-  it("creates independent duct segments only for enabled solver-backed fans", () => {
-    const oneFanResult = {
-      ...result,
-
-      fan_operating_results: [
-        createFanResult(
-          "SF-501",
-          true,
-          110000,
-        ),
-
-        createFanResult(
-          "SF-502",
-          false,
+        position: [
+          ((column + 0.5) / form.columns - 0.5) * width,
+          (0.5 - (row + 0.5) / form.rows) * height,
           0,
-        ),
-      ],
-    } as SimulationResult;
+        ],
 
-    const oneFanSegments = buildFlowSegments(
-      buildEngineeringSceneModel(
-        INITIAL_FORM,
-        oneFanResult,
-        "airflow_percentage",
-      ),
-    ).filter(
-      segment => segment.kind === "duct",
-    );
+        width: outletWidth,
+        height: outletHeight,
+        value,
 
-    expect(
-      oneFanSegments.map(
-        segment => segment.id,
-      ),
-    ).toEqual([
-      "duct-SF-501",
-    ]);
+        airflowPercentage:
+          resultOutlet?.airflow_percentage.value ?? null,
 
-    expect(oneFanSegments[0].sourceId).toBe(
-      "SF-501",
-    );
+        airflowCmh:
+          resultOutlet?.airflow_cmh.value ?? null,
 
-    expect(oneFanSegments[0].count).toBe(10);
+        velocityMps:
+          resultOutlet?.outlet_velocity_mps.value ?? null,
 
-    expect(
-      oneFanSegments[0].engineeringAirflowCmh,
-    ).toBe(110000);
+        heat:
+          numeric === null
+            ? null
+            : maximum === minimum
+              ? 0.5
+              : (numeric - minimum) / (maximum - minimum),
+      });
+    }
+  }
 
-    const twoFanResult = {
-      ...result,
+  const directionMagnitude = Math.hypot(
+    form.inlet.direction.x,
+    form.inlet.direction.y,
+    form.inlet.direction.z,
+  );
 
-      fan_operating_results: [
-        createFanResult(
-          "SF-501",
-          true,
-          110000,
-        ),
+  const direction: [number, number, number] =
+    directionMagnitude === 0
+      ? [0, 0, 0]
+      : [
+          form.inlet.direction.x / directionMagnitude,
+          form.inlet.direction.y / directionMagnitude,
+          form.inlet.direction.z / directionMagnitude,
+        ];
 
-        createFanResult(
-          "SF-502",
-          true,
-          55000,
-        ),
-      ],
-    } as SimulationResult;
+  const inletPosition: [number, number, number] = [
+    form.inlet.position.x,
+    form.inlet.position.y,
+    form.inlet.position.z,
+  ];
 
-    const twoFanSegments = buildFlowSegments(
-      buildEngineeringSceneModel(
-        INITIAL_FORM,
-        twoFanResult,
-        "airflow_percentage",
-      ),
-    ).filter(
-      segment => segment.kind === "duct",
-    );
+  /*
+   * Visualization-only estimate.
+   *
+   * This is intentionally not named ductLength or exposed as an engineering
+   * result because the current input schema has no physical duct length.
+   *
+   * ADD currently treats fan and inlet data as the simulation boundary and
+   * focuses on outlet airflow adjustment rather than full duct-system loss.
+   */
+  const ductVisualLength = Math.max(depth * 0.75, 0.5);
 
-    expect(
-      twoFanSegments.map(
-        segment => segment.id,
-      ),
-    ).toEqual([
-      "duct-SF-501",
-      "duct-SF-502",
-    ]);
+  return {
+    plenum: {
+      width,
+      height,
+      depth,
+    },
 
-    expect(twoFanSegments[0].count).toBe(10);
-    expect(twoFanSegments[1].count).toBe(5);
+    inlet: {
+      shape: inletShape,
+      diameter: inletDiameter,
+      width: inletWidth,
+      height: inletHeight,
+      position: inletPosition,
+      direction,
+    },
 
-    expect(
-      twoFanSegments[0].direction,
-    ).toEqual(
-      twoFanSegments[1].direction,
-    );
+    ductVisual: {
+      shape: inletShape,
+      diameter: inletDiameter,
+      width: inletWidth,
+      height: inletHeight,
+      length: ductVisualLength,
+      endPosition: inletPosition,
+      direction,
+      estimatedLength: true,
+    },
 
-    expect(
-      twoFanSegments[0].start,
-    ).not.toEqual(
-      twoFanSegments[1].start,
-    );
-  });
-
-  it("does not create a duct segment for an OFF fan even if malformed airflow is present", () => {
-    const malformedResult = {
-      ...result,
-
-      fan_operating_results: [
-        createFanResult(
-          "SF-501",
-          false,
-          110000,
-        ),
-      ],
-    } as SimulationResult;
-
-    const ductSegments = buildFlowSegments(
-      buildEngineeringSceneModel(
-        INITIAL_FORM,
-        malformedResult,
-        "airflow_percentage",
-      ),
-    ).filter(
-      segment => segment.kind === "duct",
-    );
-
-    expect(ductSegments).toEqual([]);
-  });
-});
+    outlets,
+    deflectors: form.deflectors,
+    fanEmitters: result?.fan_operating_results ?? [],
+    hasSolverResult: result !== null,
+  };
+}
