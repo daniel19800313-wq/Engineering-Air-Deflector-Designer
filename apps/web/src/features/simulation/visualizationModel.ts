@@ -251,7 +251,21 @@ export function buildFlowSegments(
     };
   });
 
-  const outletLength = Math.max(model.plenum.depth * 0.12, 0.12);
+  // Meeting visualization: extend the visible jet so deflection can be
+  // discussed clearly. This length is visual-only and not a CFD result.
+  const outletLength = Math.max(model.plenum.depth * 12, 2.8);
+
+  // Use the configured deflector angle to create an immediately legible
+  // outlet jet direction for design discussion. The formal solver version
+  // can later replace this with solver-derived path segments.
+  const activeDeflector = model.deflectors[0];
+  const deflectorAngleDeg = activeDeflector?.angle_deg_about_y ?? 0;
+  const deflectorAngleRad = (deflectorAngleDeg * Math.PI) / 180;
+  const outletDirection: [number, number, number] = normalizeVector([
+    Math.sin(deflectorAngleRad),
+    -Math.cos(deflectorAngleRad),
+    0,
+  ]);
 
   const outletSegments: FlowSegment[] = model.outlets
     .filter(
@@ -265,12 +279,15 @@ export function buildFlowSegments(
       kind: "outlet",
       sourceId: outlet.id,
       start: solverToSceneVector(outlet.position),
-      direction: [0, -1, 0],
+      direction: outletDirection,
       length: outletLength,
 
-      count: Math.max(
-        1,
-        Math.round(((outlet.airflowCmh ?? 0) / 220000) * 80),
+      count: Math.min(
+        24,
+        Math.max(
+          7,
+          Math.round(((outlet.airflowCmh ?? 0) / 220000) * 120),
+        ),
       ),
 
       engineeringSpeed: outlet.velocityMps ?? 0,
@@ -294,13 +311,13 @@ export function buildEngineeringSceneModel(
   result: SimulationResult | null,
   metric: HeatMetric,
 ): EngineeringSceneModel {
-  const width = form.grille_width_mm / 1000;
-  const height = form.grille_height_mm / 1000;
-  const depth = form.plenum_depth_mm / 1000;
- const inletWidth = (form.inlet_width_mm ?? 1450) / 1000;
-const inletHeight = (form.inlet_height_mm ?? 1450) / 1000;
-  const outletWidth = form.outlet_width_mm / 1000;
-  const outletHeight = form.outlet_height_mm / 1000;
+  const width = (form.grille_width_mm ?? 1150) / 1000;
+  const height = (form.grille_height_mm ?? 500) / 1000;
+  const depth = (form.plenum_depth_mm ?? 150) / 1000;
+  const inletWidth = (form.inlet_width_mm ?? 1450) / 1000;
+  const inletHeight = (form.inlet_height_mm ?? 1450) / 1000;
+  const outletWidth = (form.outlet_width_mm ?? 287.5) / 1000;
+  const outletHeight = (form.outlet_height_mm ?? 250) / 1000;
 
   const resultByCell = new Map(
     result?.outlets.map(outlet => [
@@ -386,7 +403,7 @@ const inletHeight = (form.inlet_height_mm ?? 1450) / 1000;
    * This is intentionally not named ductLength or exposed as an engineering
    * result because the current input schema has no physical duct length.
    */
-const ductVisualLength = 3.2;
+  const ductVisualLength = 3.2;
 
   return {
     plenum: {
