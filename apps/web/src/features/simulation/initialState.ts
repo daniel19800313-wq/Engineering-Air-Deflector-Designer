@@ -58,7 +58,7 @@ export const INITIAL_FORM: WorkspaceForm = {
     position: {
       x: 0,
       y: 0,
-      z: 2,
+      z: 0.15,
     },
     direction: {
       x: 0,
@@ -103,7 +103,7 @@ export const INITIAL_FORM: WorkspaceForm = {
       position_m: {
         x: 0,
         y: 0,
-        z: 1,
+        z: 0.075,
       },
       angle_deg_about_y: 45,
       width_m: 0.2,
