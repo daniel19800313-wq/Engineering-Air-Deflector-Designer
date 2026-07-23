@@ -12,6 +12,7 @@ export type HeatMetric =
   | "outlet_velocity_mps";
 
 export type FlowSegmentKind = "duct" | "outlet";
+export type InletVisualShape = "circular" | "rectangular";
 
 export interface OutletVisual {
   id: string;
@@ -35,6 +36,8 @@ export interface OutletVisual {
  * must not be interpreted as a solver-derived physical dimension.
  */
 export interface DuctVisual {
+  shape: InletVisualShape;
+  diameter: number | null;
   width: number;
   height: number;
   length: number;
@@ -51,6 +54,8 @@ export interface EngineeringSceneModel {
   };
 
   inlet: {
+    shape: InletVisualShape;
+    diameter: number | null;
     width: number;
     height: number;
     position: [number, number, number];
@@ -314,10 +319,36 @@ export function buildEngineeringSceneModel(
   const width = (form.grille_width_mm ?? 1150) / 1000;
   const height = (form.grille_height_mm ?? 500) / 1000;
   const depth = (form.plenum_depth_mm ?? 150) / 1000;
-  const inletWidth = (form.inlet_width_mm ?? 1450) / 1000;
-  const inletHeight = (form.inlet_height_mm ?? 1450) / 1000;
-  const outletWidth = (form.outlet_width_mm ?? 287.5) / 1000;
-  const outletHeight = (form.outlet_height_mm ?? 250) / 1000;
+
+  const inletShape: InletVisualShape =
+    form.inlet_shape === "circular"
+      ? "circular"
+      : "rectangular";
+
+  const inletDiameter =
+    inletShape === "circular"
+      ? (
+          form.inlet_diameter_mm ??
+          form.inlet_width_mm ??
+          1450
+        ) / 1000
+      : null;
+
+  const inletWidth =
+    inletShape === "circular"
+      ? inletDiameter ?? 1.45
+      : (form.inlet_width_mm ?? 1450) / 1000;
+
+  const inletHeight =
+    inletShape === "circular"
+      ? inletDiameter ?? 1.45
+      : (form.inlet_height_mm ?? 1450) / 1000;
+
+  const outletWidth =
+    (form.outlet_width_mm ?? 287.5) / 1000;
+
+  const outletHeight =
+    (form.outlet_height_mm ?? 250) / 1000;
 
   const resultByCell = new Map(
     result?.outlets.map(outlet => [
@@ -402,6 +433,9 @@ export function buildEngineeringSceneModel(
    *
    * This is intentionally not named ductLength or exposed as an engineering
    * result because the current input schema has no physical duct length.
+   *
+   * ADD currently treats fan and inlet data as the simulation boundary and
+   * focuses on outlet airflow adjustment rather than full duct-system loss.
    */
   const ductVisualLength = 3.2;
 
@@ -413,6 +447,8 @@ export function buildEngineeringSceneModel(
     },
 
     inlet: {
+      shape: inletShape,
+      diameter: inletDiameter,
       width: inletWidth,
       height: inletHeight,
       position: inletPosition,
@@ -420,6 +456,8 @@ export function buildEngineeringSceneModel(
     },
 
     ductVisual: {
+      shape: inletShape,
+      diameter: inletDiameter,
       width: inletWidth,
       height: inletHeight,
       length: ductVisualLength,

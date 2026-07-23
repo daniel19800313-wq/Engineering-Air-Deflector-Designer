@@ -28,12 +28,14 @@ export function EngineeringScene3D({
   cameraView,
   showAnnotations,
   showParticles,
+  ductOpacity = 0.16,
   t,
 }: {
   model: EngineeringSceneModel;
   cameraView: CameraView;
   showAnnotations: boolean;
   showParticles: boolean;
+  ductOpacity?: number;
   t: T;
 }) {
   const extent = Math.max(
@@ -73,7 +75,10 @@ export function EngineeringScene3D({
 
         <axesHelper args={[extent * 0.45]} />
 
-        <Duct model={model} />
+        <Duct
+  model={model}
+  opacity={ductOpacity}
+/>
 
         <Plenum model={model} />
 
@@ -165,8 +170,10 @@ function SceneCamera({
 
 function Duct({
   model,
+  opacity,
 }: {
   model: EngineeringSceneModel;
+  opacity: number;
 }) {
   const endPosition = useMemo(
     () =>
@@ -208,45 +215,94 @@ function Duct({
     model.ductVisual.width,
   ]);
 
-  const geometry = useMemo(() => {
-    if (isCircular) {
-      const diameter =
-        (model.ductVisual.width +
-          model.ductVisual.height) /
-        2;
-
-      const cylinder = new THREE.CylinderGeometry(
-        diameter / 2,
-        diameter / 2,
-        model.ductVisual.length,
-        64,
-        1,
-        true,
-      );
-
-      // CylinderGeometry is created along +Y. Rotate it so the
-      // local duct axis is +Z, matching the rectangular version.
-      cylinder.rotateX(Math.PI / 2);
-      return cylinder;
-    }
-
-    return new THREE.BoxGeometry(
-      model.ductVisual.width,
-      model.ductVisual.height,
-      model.ductVisual.length,
+  const dimensions = useMemo(() => {
+    const width = model.ductVisual.width;
+    const height = model.ductVisual.height;
+    const length = model.ductVisual.length;
+    const diameter = (width + height) / 2;
+    const wallThickness = Math.max(
+      Math.min(diameter, width, height) * 0.018,
+      0.012,
     );
+    const flangeDepth = Math.max(wallThickness * 2.4, 0.028);
+    const flangeWidth = Math.max(wallThickness * 3.2, 0.045);
+
+    return {
+      width,
+      height,
+      length,
+      diameter,
+      wallThickness,
+      flangeDepth,
+      flangeWidth,
+    };
   }, [
-    isCircular,
     model.ductVisual.height,
     model.ductVisual.length,
     model.ductVisual.width,
   ]);
 
+  const outerGeometry = useMemo(() => {
+    if (isCircular) {
+      const cylinder = new THREE.CylinderGeometry(
+        dimensions.diameter / 2,
+        dimensions.diameter / 2,
+        dimensions.length,
+        128,
+        1,
+        true,
+      );
+      cylinder.rotateX(Math.PI / 2);
+      return cylinder;
+    }
+
+    return new THREE.BoxGeometry(
+      dimensions.width,
+      dimensions.height,
+      dimensions.length,
+    );
+  }, [dimensions, isCircular]);
+
+  const innerGeometry = useMemo(() => {
+    if (isCircular) {
+      const innerDiameter = Math.max(
+        dimensions.diameter -
+          dimensions.wallThickness * 2,
+        dimensions.diameter * 0.88,
+      );
+      const cylinder = new THREE.CylinderGeometry(
+        innerDiameter / 2,
+        innerDiameter / 2,
+        dimensions.length * 0.995,
+        128,
+        1,
+        true,
+      );
+      cylinder.rotateX(Math.PI / 2);
+      return cylinder;
+    }
+
+    return new THREE.BoxGeometry(
+      Math.max(
+        dimensions.width -
+          dimensions.wallThickness * 2,
+        dimensions.width * 0.9,
+      ),
+      Math.max(
+        dimensions.height -
+          dimensions.wallThickness * 2,
+        dimensions.height * 0.9,
+      ),
+      dimensions.length * 0.995,
+    );
+  }, [dimensions, isCircular]);
+
   useEffect(() => {
     return () => {
-      geometry.dispose();
+      outerGeometry.dispose();
+      innerGeometry.dispose();
     };
-  }, [geometry]);
+  }, [innerGeometry, outerGeometry]);
 
   if (direction.lengthSq() === 0) {
     return null;
@@ -256,7 +312,7 @@ function Duct({
     .clone()
     .addScaledVector(
       direction,
-      -model.ductVisual.length / 2,
+      -dimensions.length / 2,
     );
 
   const quaternion =
@@ -265,24 +321,212 @@ function Duct({
       direction,
     );
 
+  const clampedOpacity = THREE.MathUtils.clamp(
+    opacity,
+    0.04,
+    1,
+  );
+
+  const edgeOpacity = THREE.MathUtils.clamp(
+    0.45 + (1 - clampedOpacity) * 0.4,
+    0.45,
+    0.9,
+  );
+
   return (
     <group
       position={center.toArray()}
       quaternion={quaternion}
     >
-      <mesh geometry={geometry}>
+      <mesh geometry={outerGeometry}>
         <meshStandardMaterial
-          color="#304944"
-          transparent
-          opacity={0.1}
+          color="#7f918d"
+          metalness={0.78}
+          roughness={0.34}
+          transparent={clampedOpacity < 1}
+          opacity={clampedOpacity}
           side={THREE.DoubleSide}
+          depthWrite={clampedOpacity > 0.45}
+        />
+      </mesh>
+
+      <mesh geometry={innerGeometry} scale={[0.995, 0.995, 0.995]}>
+        <meshStandardMaterial
+          color="#1a2926"
+          metalness={0.42}
+          roughness={0.62}
+          transparent
+          opacity={Math.max(clampedOpacity * 0.45, 0.035)}
+          side={THREE.BackSide}
+          depthWrite={false}
         />
       </mesh>
 
       <lineSegments>
-        <edgesGeometry args={[geometry]} />
-        <lineBasicMaterial color="#5f837b" />
+        <edgesGeometry args={[outerGeometry]} />
+        <lineBasicMaterial
+          color="#b7ccc7"
+          transparent
+          opacity={edgeOpacity}
+        />
       </lineSegments>
+
+      {isCircular ? (
+        <>
+          <DuctFlange
+            diameter={dimensions.diameter}
+            tube={dimensions.flangeWidth}
+            positionZ={-dimensions.length / 2}
+            depth={dimensions.flangeDepth}
+            opacity={clampedOpacity}
+          />
+          <DuctFlange
+            diameter={dimensions.diameter}
+            tube={dimensions.flangeWidth}
+            positionZ={dimensions.length / 2}
+            depth={dimensions.flangeDepth}
+            opacity={clampedOpacity}
+          />
+        </>
+      ) : (
+        <>
+          <RectangularDuctFlange
+            width={dimensions.width}
+            height={dimensions.height}
+            thickness={dimensions.flangeWidth}
+            depth={dimensions.flangeDepth}
+            positionZ={-dimensions.length / 2}
+            opacity={clampedOpacity}
+          />
+          <RectangularDuctFlange
+            width={dimensions.width}
+            height={dimensions.height}
+            thickness={dimensions.flangeWidth}
+            depth={dimensions.flangeDepth}
+            positionZ={dimensions.length / 2}
+            opacity={clampedOpacity}
+          />
+        </>
+      )}
+    </group>
+  );
+}
+
+function DuctFlange({
+  diameter,
+  tube,
+  positionZ,
+  depth,
+  opacity,
+}: {
+  diameter: number;
+  tube: number;
+  positionZ: number;
+  depth: number;
+  opacity: number;
+}) {
+  return (
+    <group position={[0, 0, positionZ]}>
+      <mesh rotation={[Math.PI / 2, 0, 0]}>
+        <torusGeometry
+          args={[
+            diameter / 2 + tube * 0.42,
+            tube / 2,
+            16,
+            128,
+          ]}
+        />
+        <meshStandardMaterial
+          color="#a9bbb7"
+          metalness={0.86}
+          roughness={0.26}
+          transparent={opacity < 1}
+          opacity={Math.max(opacity, 0.24)}
+        />
+      </mesh>
+
+      <mesh
+        position={[0, 0, depth / 2]}
+        rotation={[Math.PI / 2, 0, 0]}
+      >
+        <cylinderGeometry
+          args={[
+            diameter / 2 + tube * 0.5,
+            diameter / 2 + tube * 0.5,
+            depth,
+            128,
+            1,
+            true,
+          ]}
+        />
+        <meshStandardMaterial
+          color="#889b97"
+          metalness={0.82}
+          roughness={0.3}
+          transparent
+          opacity={Math.max(opacity * 0.8, 0.18)}
+          side={THREE.DoubleSide}
+        />
+      </mesh>
+    </group>
+  );
+}
+
+function RectangularDuctFlange({
+  width,
+  height,
+  thickness,
+  depth,
+  positionZ,
+  opacity,
+}: {
+  width: number;
+  height: number;
+  thickness: number;
+  depth: number;
+  positionZ: number;
+  opacity: number;
+}) {
+  const material = (
+    <meshStandardMaterial
+      color="#a9bbb7"
+      metalness={0.86}
+      roughness={0.26}
+      transparent={opacity < 1}
+      opacity={Math.max(opacity, 0.24)}
+    />
+  );
+
+  return (
+    <group position={[0, 0, positionZ]}>
+      <mesh position={[0, height / 2, 0]}>
+        <boxGeometry
+          args={[
+            width + thickness * 2,
+            thickness,
+            depth,
+          ]}
+        />
+        {material}
+      </mesh>
+      <mesh position={[0, -height / 2, 0]}>
+        <boxGeometry
+          args={[
+            width + thickness * 2,
+            thickness,
+            depth,
+          ]}
+        />
+        {material}
+      </mesh>
+      <mesh position={[width / 2, 0, 0]}>
+        <boxGeometry args={[thickness, height, depth]} />
+        {material}
+      </mesh>
+      <mesh position={[-width / 2, 0, 0]}>
+        <boxGeometry args={[thickness, height, depth]} />
+        {material}
+      </mesh>
     </group>
   );
 }
@@ -473,6 +717,7 @@ function DualAxisOutletLouver({
   height: number;
   color: THREE.Color;
 }) {
+  const grilleDepth = 0.15;
   const frameThickness = Math.max(
     Math.min(width, height) * 0.045,
     0.008,
@@ -481,21 +726,22 @@ function DualAxisOutletLouver({
     frameThickness * 0.42,
     0.004,
   );
-  const layerGap = Math.max(
-    Math.min(width, height) * 0.065,
-    0.018,
-  );
+  const frontY = -grilleDepth / 2;
+  const rearY = grilleDepth / 2;
+  const verticalLayerY = -grilleDepth * 0.18;
+  const horizontalLayerY = grilleDepth * 0.18;
 
   return (
     <group>
       <mesh position={[0, 0, 0]}>
-        <boxGeometry args={[width, 0.028, height]} />
+        <boxGeometry args={[width, grilleDepth, height]} />
         <meshStandardMaterial
           color={color}
           transparent
-          opacity={0.22}
+          opacity={0.16}
           emissive={color}
-          emissiveIntensity={0.12}
+          emissiveIntensity={0.1}
+          side={THREE.DoubleSide}
         />
       </mesh>
 
@@ -503,20 +749,39 @@ function DualAxisOutletLouver({
         width={width}
         height={height}
         thickness={frameThickness}
+        depth={Math.max(frameThickness * 0.9, 0.012)}
+        y={frontY}
+      />
+
+      <OutletFrame
+        width={width}
+        height={height}
+        thickness={frameThickness}
+        depth={Math.max(frameThickness * 0.75, 0.01)}
+        y={rearY}
+      />
+
+      <OutletSideWalls
+        width={width}
+        height={height}
+        depth={grilleDepth}
+        thickness={Math.max(frameThickness * 0.45, 0.006)}
       />
 
       <VerticalChevronLayer
         width={width}
         height={height}
         bladeThickness={bladeThickness}
-        y={-layerGap / 2}
+        y={verticalLayerY}
+        bladeDepth={grilleDepth * 0.34}
       />
 
       <HorizontalChevronLayer
         width={width}
         height={height}
         bladeThickness={bladeThickness}
-        y={layerGap / 2}
+        y={horizontalLayerY}
+        bladeDepth={grilleDepth * 0.34}
       />
     </group>
   );
@@ -526,15 +791,17 @@ function OutletFrame({
   width,
   height,
   thickness,
+  depth,
+  y,
 }: {
   width: number;
   height: number;
   thickness: number;
+  depth: number;
+  y: number;
 }) {
-  const depth = Math.max(thickness * 0.8, 0.008);
-
   return (
-    <group>
+    <group position={[0, y, 0]}>
       <LouverBar
         size={[width, depth, thickness]}
         position={[0, 0, height / 2 - thickness / 2]}
@@ -555,16 +822,54 @@ function OutletFrame({
   );
 }
 
+function OutletSideWalls({
+  width,
+  height,
+  depth,
+  thickness,
+}: {
+  width: number;
+  height: number;
+  depth: number;
+  thickness: number;
+}) {
+  const innerWidth = Math.max(width - thickness * 2, width * 0.9);
+  const innerHeight = Math.max(height - thickness * 2, height * 0.9);
+
+  return (
+    <group>
+      <LouverBar
+        size={[innerWidth, depth, thickness]}
+        position={[0, 0, height / 2 - thickness / 2]}
+      />
+      <LouverBar
+        size={[innerWidth, depth, thickness]}
+        position={[0, 0, -height / 2 + thickness / 2]}
+      />
+      <LouverBar
+        size={[thickness, depth, innerHeight]}
+        position={[-width / 2 + thickness / 2, 0, 0]}
+      />
+      <LouverBar
+        size={[thickness, depth, innerHeight]}
+        position={[width / 2 - thickness / 2, 0, 0]}
+      />
+    </group>
+  );
+}
+
 function VerticalChevronLayer({
   width,
   height,
   bladeThickness,
   y,
+  bladeDepth,
 }: {
   width: number;
   height: number;
   bladeThickness: number;
   y: number;
+  bladeDepth: number;
 }) {
   const count = 6;
   const usableWidth = width * 0.78;
@@ -583,7 +888,7 @@ function VerticalChevronLayer({
             key={`vertical-${index}`}
             size={[
               bladeThickness,
-              Math.max(bladeThickness * 5, 0.018),
+              bladeDepth,
               bladeHeight,
             ]}
             position={[x, 0, 0]}
@@ -600,11 +905,13 @@ function HorizontalChevronLayer({
   height,
   bladeThickness,
   y,
+  bladeDepth,
 }: {
   width: number;
   height: number;
   bladeThickness: number;
   y: number;
+  bladeDepth: number;
 }) {
   const count = 4;
   const usableHeight = height * 0.66;
@@ -623,7 +930,7 @@ function HorizontalChevronLayer({
             key={`horizontal-${index}`}
             size={[
               bladeWidth,
-              Math.max(bladeThickness * 5, 0.018),
+              bladeDepth,
               bladeThickness,
             ]}
             position={[0, 0, z]}
