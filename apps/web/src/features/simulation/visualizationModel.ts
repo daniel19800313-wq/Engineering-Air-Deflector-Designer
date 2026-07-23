@@ -297,8 +297,8 @@ export function buildEngineeringSceneModel(
   const width = form.grille_width_mm / 1000;
   const height = form.grille_height_mm / 1000;
   const depth = form.plenum_depth_mm / 1000;
-  const inletWidth = form.inlet_width_mm / 1000;
-  const inletHeight = form.inlet_height_mm / 1000;
+ const inletWidth = (form.inlet_width_mm ?? 1450) / 1000;
+const inletHeight = (form.inlet_height_mm ?? 1450) / 1000;
   const outletWidth = form.outlet_width_mm / 1000;
   const outletHeight = form.outlet_height_mm / 1000;
 
