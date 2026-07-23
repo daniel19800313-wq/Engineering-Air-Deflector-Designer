@@ -188,6 +188,66 @@ function Duct({
     return vector;
   }, [model.ductVisual.direction]);
 
+  const isCircular = useMemo(() => {
+    const larger = Math.max(
+      model.ductVisual.width,
+      model.ductVisual.height,
+      0.0001,
+    );
+
+    return (
+      Math.abs(
+        model.ductVisual.width -
+          model.ductVisual.height,
+      ) /
+        larger <
+      0.01
+    );
+  }, [
+    model.ductVisual.height,
+    model.ductVisual.width,
+  ]);
+
+  const geometry = useMemo(() => {
+    if (isCircular) {
+      const diameter =
+        (model.ductVisual.width +
+          model.ductVisual.height) /
+        2;
+
+      const cylinder = new THREE.CylinderGeometry(
+        diameter / 2,
+        diameter / 2,
+        model.ductVisual.length,
+        64,
+        1,
+        true,
+      );
+
+      // CylinderGeometry is created along +Y. Rotate it so the
+      // local duct axis is +Z, matching the rectangular version.
+      cylinder.rotateX(Math.PI / 2);
+      return cylinder;
+    }
+
+    return new THREE.BoxGeometry(
+      model.ductVisual.width,
+      model.ductVisual.height,
+      model.ductVisual.length,
+    );
+  }, [
+    isCircular,
+    model.ductVisual.height,
+    model.ductVisual.length,
+    model.ductVisual.width,
+  ]);
+
+  useEffect(() => {
+    return () => {
+      geometry.dispose();
+    };
+  }, [geometry]);
+
   if (direction.lengthSq() === 0) {
     return null;
   }
@@ -204,26 +264,6 @@ function Duct({
       new THREE.Vector3(0, 0, 1),
       direction,
     );
-
-  const geometry = useMemo(
-    () =>
-      new THREE.BoxGeometry(
-        model.ductVisual.width,
-        model.ductVisual.height,
-        model.ductVisual.length,
-      ),
-    [
-      model.ductVisual.width,
-      model.ductVisual.height,
-      model.ductVisual.length,
-    ],
-  );
-
-  useEffect(() => {
-    return () => {
-      geometry.dispose();
-    };
-  }, [geometry]);
 
   return (
     <group
@@ -393,27 +433,15 @@ function OutletGrid({
             key={outlet.id}
             position={toThree(outlet.position)}
           >
-            <mesh>
-              <boxGeometry
-                args={[
-                  outlet.width,
-                  0.035,
-                  outlet.height,
-                ]}
-              />
-
-              <meshStandardMaterial
-                color={color}
-                emissive={color}
-                emissiveIntensity={
-                  outlet.heat === null ? 0 : 0.25
-                }
-              />
-            </mesh>
+            <DualAxisOutletLouver
+              width={outlet.width}
+              height={outlet.height}
+              color={color}
+            />
 
             {showAnnotations && (
               <Html
-                position={[0, -0.035, 0]}
+                position={[0, -0.085, 0]}
                 center
               >
                 <span className="scene-label outlet-label">
@@ -433,6 +461,200 @@ function OutletGrid({
         );
       })}
     </group>
+  );
+}
+
+function DualAxisOutletLouver({
+  width,
+  height,
+  color,
+}: {
+  width: number;
+  height: number;
+  color: THREE.Color;
+}) {
+  const frameThickness = Math.max(
+    Math.min(width, height) * 0.045,
+    0.008,
+  );
+  const bladeThickness = Math.max(
+    frameThickness * 0.42,
+    0.004,
+  );
+  const layerGap = Math.max(
+    Math.min(width, height) * 0.065,
+    0.018,
+  );
+
+  return (
+    <group>
+      <mesh position={[0, 0, 0]}>
+        <boxGeometry args={[width, 0.028, height]} />
+        <meshStandardMaterial
+          color={color}
+          transparent
+          opacity={0.22}
+          emissive={color}
+          emissiveIntensity={0.12}
+        />
+      </mesh>
+
+      <OutletFrame
+        width={width}
+        height={height}
+        thickness={frameThickness}
+      />
+
+      <VerticalChevronLayer
+        width={width}
+        height={height}
+        bladeThickness={bladeThickness}
+        y={-layerGap / 2}
+      />
+
+      <HorizontalChevronLayer
+        width={width}
+        height={height}
+        bladeThickness={bladeThickness}
+        y={layerGap / 2}
+      />
+    </group>
+  );
+}
+
+function OutletFrame({
+  width,
+  height,
+  thickness,
+}: {
+  width: number;
+  height: number;
+  thickness: number;
+}) {
+  const depth = Math.max(thickness * 0.8, 0.008);
+
+  return (
+    <group>
+      <LouverBar
+        size={[width, depth, thickness]}
+        position={[0, 0, height / 2 - thickness / 2]}
+      />
+      <LouverBar
+        size={[width, depth, thickness]}
+        position={[0, 0, -height / 2 + thickness / 2]}
+      />
+      <LouverBar
+        size={[thickness, depth, height]}
+        position={[-width / 2 + thickness / 2, 0, 0]}
+      />
+      <LouverBar
+        size={[thickness, depth, height]}
+        position={[width / 2 - thickness / 2, 0, 0]}
+      />
+    </group>
+  );
+}
+
+function VerticalChevronLayer({
+  width,
+  height,
+  bladeThickness,
+  y,
+}: {
+  width: number;
+  height: number;
+  bladeThickness: number;
+  y: number;
+}) {
+  const count = 6;
+  const usableWidth = width * 0.78;
+  const bladeHeight = height * 0.78;
+  const angle = THREE.MathUtils.degToRad(18);
+
+  return (
+    <group position={[0, y, 0]}>
+      {Array.from({ length: count }, (_, index) => {
+        const ratio =
+          count === 1 ? 0.5 : index / (count - 1);
+        const x = -usableWidth / 2 + usableWidth * ratio;
+        const rotation = x < 0 ? angle : -angle;
+
+        return (
+          <LouverBar
+            key={`vertical-${index}`}
+            size={[
+              bladeThickness,
+              Math.max(bladeThickness * 5, 0.018),
+              bladeHeight,
+            ]}
+            position={[x, 0, 0]}
+            rotation={[0, 0, rotation]}
+          />
+        );
+      })}
+    </group>
+  );
+}
+
+function HorizontalChevronLayer({
+  width,
+  height,
+  bladeThickness,
+  y,
+}: {
+  width: number;
+  height: number;
+  bladeThickness: number;
+  y: number;
+}) {
+  const count = 4;
+  const usableHeight = height * 0.66;
+  const bladeWidth = width * 0.82;
+  const angle = THREE.MathUtils.degToRad(18);
+
+  return (
+    <group position={[0, y, 0]}>
+      {Array.from({ length: count }, (_, index) => {
+        const ratio =
+          count === 1 ? 0.5 : index / (count - 1);
+        const z = -usableHeight / 2 + usableHeight * ratio;
+        const rotation = z < 0 ? -angle : angle;
+
+        return (
+          <LouverBar
+            key={`horizontal-${index}`}
+            size={[
+              bladeWidth,
+              Math.max(bladeThickness * 5, 0.018),
+              bladeThickness,
+            ]}
+            position={[0, 0, z]}
+            rotation={[rotation, 0, 0]}
+          />
+        );
+      })}
+    </group>
+  );
+}
+
+function LouverBar({
+  size,
+  position,
+  rotation = [0, 0, 0],
+}: {
+  size: [number, number, number];
+  position: [number, number, number];
+  rotation?: [number, number, number];
+}) {
+  return (
+    <mesh position={position} rotation={rotation}>
+      <boxGeometry args={size} />
+      <meshStandardMaterial
+        color="#9fb7b1"
+        metalness={0.62}
+        roughness={0.34}
+      />
+    </mesh>
   );
 }
 
