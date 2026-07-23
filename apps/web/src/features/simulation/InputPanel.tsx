@@ -45,7 +45,17 @@ export function InputPanel({form,result,setForm,running,errors,onRun,onReset}:Pr
   });
   const updateDeflector=(index:number,patch:Record<string,unknown>)=>setForm(current=>({...current,deflectors:current.deflectors.map((item,i)=>i===index?{...item,...patch}:item)}));
   const updatePosition=(index:number,axis:"x"|"y"|"z",value:number)=>setForm(current=>({...current,deflectors:current.deflectors.map((item,i)=>i===index?{...item,position_m:{...item.position_m,[axis]:value}}:item)}));
-  const updateInlet=(part:"position"|"direction",axis:"x"|"y"|"z",value:number)=>setForm(current=>({...current,inlet:{...current.inlet,[part]:{...current.inlet[part],[axis]:value}},inlet_direction_preset:part==="direction"?"custom":current.inlet_direction_preset}));
+  const updateInlet=(part:"position"|"direction",axis:"x"|"y"|"z",value:number)=>setForm(current=>({
+    ...current,
+    inlet:{
+      ...current.inlet,
+      [part]:{
+        ...current.inlet[part],
+        [axis]:value,
+      },
+    },
+    inlet_direction_preset:"custom",
+  }));
   const selectPreset=(preset:InletDirectionPreset)=>setForm(current=>({
     ...current,
     inlet_direction_preset:preset,
@@ -60,25 +70,19 @@ export function InputPanel({form,result,setForm,running,errors,onRun,onReset}:Pr
       <label>{t("inletHeight")} <span>mm</span><input aria-label={`${t("inletHeight")} mm`} type="number" min="0" value={form.inlet_height_mm} onChange={e=>update("inlet_height_mm",number(e.target.value))}/></label>
     </div><div className="inlet-boundary">
       <h3>{t("inletBoundary")}</h3><label className="preset-field">{t("directionPreset")}<select aria-label={t("directionPreset")} value={form.inlet_direction_preset} onChange={event=>selectPreset(event.target.value as InletDirectionPreset)}><option value="downward">{t("presetDownward")}</option><option value="upward">{t("presetUpward")}</option><option value="leftToRight">{t("presetLeftToRight")}</option><option value="rightToLeft">{t("presetRightToLeft")}</option><option value="frontToBack">{t("presetFrontToBack")}</option><option value="backToFront">{t("presetBackToFront")}</option><option value="custom">{t("presetCustom")}</option></select></label>
-      {form.inlet_direction_preset==="custom"?<>
-        <div className="vector-group"><span>{t("inletPosition")} <small>m</small></span><div className="vector-fields">{(["x","y","z"] as const).map(axis=><label key={axis}>{axis.toUpperCase()}<input aria-label={`${t("inletPosition")} ${axis.toUpperCase()}`} type="number" step="0.01" value={form.inlet.position[axis]} onChange={event=>updateInlet("position",axis,number(event.target.value))}/></label>)}</div></div>
-        <div className="vector-group"><span>{t("inletDirection")} <small>{t("normalizedOnRun")}</small></span><div className="vector-fields">{(["x","y","z"] as const).map(axis=><label key={axis}>{axis.toUpperCase()}<input aria-label={`${t("inletDirection")} ${axis.toUpperCase()}`} type="number" step="0.1" value={form.inlet.direction[axis]} onChange={event=>updateInlet("direction",axis,number(event.target.value))}/></label>)}</div></div>
-        <p className="field-note coordinate-note">{t("coordinateConvention")}</p>
-      </>:<>
-        <div className="vector-group">
-          <span>{t("inletPosition")} <small>m · auto</small></span>
-          <div className="vector-fields">
-            {(["x","y","z"] as const).map(axis=><label key={axis}>{axis.toUpperCase()}<input aria-label={`${t("inletPosition")} ${axis.toUpperCase()}`} type="number" value={Number(form.inlet.position[axis]).toFixed(3)} disabled/></label>)}
-          </div>
+      <div className="vector-group">
+        <span>{t("inletPosition")} <small>m</small></span>
+        <div className="vector-fields">
+          {(["x","y","z"] as const).map(axis=><label key={axis}>{axis.toUpperCase()}<input aria-label={`${t("inletPosition")} ${axis.toUpperCase()}`} type="number" step="0.01" value={form.inlet.position[axis]} onChange={event=>updateInlet("position",axis,number(event.target.value))}/></label>)}
         </div>
-        <div className="vector-group">
-          <span>{t("inletDirection")} <small>auto</small></span>
-          <div className="vector-fields">
-            {(["x","y","z"] as const).map(axis=><label key={axis}>{axis.toUpperCase()}<input aria-label={`${t("inletDirection")} ${axis.toUpperCase()}`} type="number" value={form.inlet.direction[axis]} disabled/></label>)}
-          </div>
+      </div>
+      <div className="vector-group">
+        <span>{t("inletDirection")} <small>{t("normalizedOnRun")}</small></span>
+        <div className="vector-fields">
+          {(["x","y","z"] as const).map(axis=><label key={axis}>{axis.toUpperCase()}<input aria-label={`${t("inletDirection")} ${axis.toUpperCase()}`} type="number" step="0.1" value={form.inlet.direction[axis]} onChange={event=>updateInlet("direction",axis,number(event.target.value))}/></label>)}
         </div>
-        <p className="field-note coordinate-note">入口中心會自動貼齊靜壓箱邊界，方向自動朝向箱體內部。</p>
-      </>}
+      </div>
+      <p className="field-note coordinate-note">選擇方向預設時會自動帶入座標；手動修改任何座標後會切換為自訂模式。</p>
     </div></fieldset>
     <fieldset><legend>{t("fanSection")}</legend><div className="fan-list">{form.fans.map(fan=>{const operating=result?.fan_operating_results?.find(item=>item.equipment_id===fan.equipment_id);return <section className="fan-card" key={fan.equipment_id} aria-label={fan.equipment_id}>
       <div className="fan-head"><strong>{fan.equipment_id}</strong><label><input aria-label={`${fan.equipment_id} ${t("enabled")}`} type="checkbox" checked={fan.enabled} onChange={event=>updateFan(fan.equipment_id,{enabled:event.target.checked},event.target.checked?"custom":"off")}/>{fan.enabled?t("enabled"):t("disabled")}</label></div>
