@@ -112,3 +112,4 @@ export function InputPanel({form,result,setForm,running,errors,onRun,onReset}:Pr
     {errors.length>0&&<div className="error-box" role="alert"><strong>{t("checkInputs")}</strong><ul>{errors.map((item,index)=><li key={`${item.message}-${index}`}>{item.message}{item.technical&&<details><summary>{t("technicalDiagnostics")}</summary><code>{item.technical}</code></details>}</li>)}</ul></div>}
     <div className="actions"><button className="secondary" type="button" onClick={onReset}>{t("reset")}</button><button className="primary" type="button" disabled={running} onClick={onRun}>{running?t("runningSolver"):t("runSimulation")}</button></div>
   </aside>;
+}
